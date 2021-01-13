@@ -1,0 +1,97 @@
+spring:
+  kafka:
+#    kafka集群broker列表 host1:por1,host2:port2,host3:port3
+    bootstrap-servers: docker01:9092
+
+########生产者配置########
+    producer:
+#     compression-type 消息的压缩算法
+#     默认情况下是 none，消息发送时不会被压缩。 该参数可以设置为 none, gzip, snappy, lz4, zstd
+      compression-type: none
+#     acks 有多少个分区副本收到消息，生产者才会认为消息写入是成功的，只能选（0、1、all）
+      acks: all
+#     bufferMemory 生产者内存缓冲区的大小，下面是32MB
+      bufferMemory: 33554432
+#     retries 发生临时性的错误（比如分区找不到首领）重试次数，
+#      默认情况下，生产者会在每次重试之间等待 100 ms，可以通过 retry.backoff.ms 参数来改变这个时间间隔
+      retries: 3
+#      key和value 的序列化器，这两个默认是 StringSerializer.class
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+#      batch-size 批次大小，按照字节数计算
+      batch-size: 1024
+      properties:
+#        自定义分区器
+        partitioner:
+          class: com.xander.kafka.partitioner.XdPartitioner
+#        request.timeout.ms 在发送数据时等待服务器返回响应的时间
+        request:
+          timeout:
+            ms: 1000
+#        发送批次之前等待更多消息加入批次的时间
+#        linger.ms为0，表示生产者每条消息都直接提交给kafka，不等待批次，这时候batch-size其实就没用了
+        linger:
+          ms: 100
+#      retry.backoff.ms  每次重试之间的时间间隔，默认是100ms，这里配置50ms
+        retry:
+          backoff:
+            ms: 50
+#   max.in.flight.requests.per.connection 在收到服务器响应之前可以发送多少个消息，如果不需要保证消息顺序性的场景，建议不用配置该属性
+#  把它设为 1 可以保证消息在同一个生产者的某一个分区上，是按照发送的顺序写入服务器的，即使发生了重试。但是会降低Kafka的吞吐量
+        max:
+          in:
+            flight:
+              requests:
+                per:
+                  connection: 1
+#  max.block.ms 缓冲区满时的最大阻塞时间，在阻塞时间达到 max.block.ms 时，生产者会抛出超时异常。
+          block:
+            ms: 200
+
+########### 消费者配置 ###############
+    consumer:
+#  auto-offset-reset: 没有偏移量的分区或者偏移量无效时如何处理
+# earliest: 消费者将从起始位置读取分区的记录
+# latest: 消费者将从最新的记录开始读取数据
+# none:只要有一个分区不存在已提交的offset,就抛出异常;
+      auto-offset-reset: earliest
+# group-id 默认的消费者群组
+      group-id: defaultGroup
+# enable.auto.commit 是否自动提交偏移量，
+      enableAutoCommit: true
+#      自动提交偏移量的间隔时间，100ms
+      autoCommitInterval: 100ms
+#  单次请求能够返回的记录数量
+      max-poll-records: 3
+#  fetch.max.wait.ms 指定获取记录的最大等待时间，这里是100ms
+      fetchMaxWait: 100ms
+#      key和value 的反序列化器，这两个默认是 StringSerializer.class
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+#        fetch.min.bytes 从服务器获取记录的最小字节数
+        fetch:
+          min:
+            bytes: 102400
+#        request.timeout.ms 消费者请求超时时间
+        request:
+          timeout:
+            ms: 1000
+#        会话过期时间
+        session:
+          timeout:
+            ms: 120000
+#       向协调器发送心跳的频率
+        heartbeat:
+          interval:
+            ms: 40000
+# 如果需要批量消费，则需要修改 spring.kafka.listener.type = batch，默认是 single，单次消费单条消息
+#    listener:
+#      type: batch
+#   手动提交偏移量时：消费者消息确认模式改为手动确认
+#    listener:
+#      ack-mode: manual
+
+
+
+
